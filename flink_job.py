@@ -1,3 +1,4 @@
+import os
 import json
 import psycopg2
 from datetime import datetime
@@ -5,9 +6,11 @@ from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitializer
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.common import WatermarkStrategy
-from pyflink.datastream.functions import MapFunction, RichMapFunction
+from pyflink.datastream.functions import MapFunction
 from pyflink.common.typeinfo import Types
 
+# возможно, придется поменять 'kafka:29092' на 'localhost:9092', 
+# а 'postgres' на 'localhost'
 KAFKA_BOOTSTRAP = 'kafka:29092'
 TOPIC = 'pet_sales'
 PG_CONN = {
@@ -30,7 +33,7 @@ def parse_date(date_str):
     return None
 
 
-class StarSchemaWriter(RichMapFunction):
+class StarSchemaWriter(MapFunction):
     def __init__(self):
         self.conn = None
 
@@ -159,6 +162,10 @@ class StarSchemaWriter(RichMapFunction):
 def main():
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(1)
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    jar_path = f"file://{current_dir}/flink-sql-connector-kafka-1.17.0.jar"
+    env.add_jars(jar_path)
 
     source = KafkaSource.builder() \
         .set_bootstrap_servers(KAFKA_BOOTSTRAP) \
